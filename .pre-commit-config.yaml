@@ -1,0 +1,33 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --project backend ruff format backend
+        language: system
+        files: ^backend/
+        pass_filenames: false
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --project backend ruff check --fix backend
+        language: system
+        files: ^backend/
+        pass_filenames: false
+      - id: ty-check
+        name: ty check
+        entry: uv run --project backend ty check --project backend
+        language: system
+        files: ^backend/
+        pass_filenames: false
+      - id: biome-format
+        name: biome format
+        entry: pnpm --dir frontend exec biome format --write .
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+      - id: eslint
+        name: eslint
+        entry: pnpm --dir frontend exec eslint
+        language: system
+        files: ^frontend/
+        pass_filenames: false
