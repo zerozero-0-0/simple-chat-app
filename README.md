@@ -33,10 +33,20 @@ pre-commit install
 ## 開発
 
 ```bash
+# フロントエンド http://localhost:3000
 pnpm --dir frontend dev
+
+# バックエンド http://localhost:8000
+uv run --project backend uvicorn app.main:app --reload --app-dir backend
 ```
 
-http://localhost:3000 で開発サーバーが起動します。
+API ドキュメントは http://localhost:8000/docs で確認できます。
+
+## テスト
+
+```bash
+uv run --directory backend pytest
+```
 
 ## コード品質
 
