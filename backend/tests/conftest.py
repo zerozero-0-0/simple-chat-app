@@ -12,11 +12,7 @@ from app.main import app
 
 @pytest.fixture(autouse=True)
 def development_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    """外の `APP_ENVIRONMENT` にスイート全体が左右されないようにする。
-
-    本番相当の設定を入れたシェルで走らせると、Cookie に `Secure` が付いて
-    `http://test` 越しの httpx が Cookie を保持しなくなり、認証まわりが軒並み落ちる。
-    """
+    """スイート全体を `development` に固定し、外の `APP_ENVIRONMENT` から隔離する。"""
     monkeypatch.setattr(settings, "environment", "development")
 
 

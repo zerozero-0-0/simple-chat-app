@@ -8,11 +8,7 @@ from app.db import Base
 
 
 def utcnow() -> datetime:
-    """SQLite はタイムゾーンを保持しないので、UTC の naive datetime で揃える。
-
-    aware な値を書くと読み出しで tzinfo が落ち、比較のたびに naive と aware が
-    混ざる。書く側で UTC に寄せておけば、DB を経由しても意味が変わらない。
-    """
+    """SQLite はタイムゾーンを保持しないので、UTC の naive datetime で揃える。"""
     return datetime.now(UTC).replace(tzinfo=None)
 
 
@@ -39,11 +35,7 @@ class User(Base):
 
 
 class Session(Base):
-    """Cookie で渡すセッション。
-
-    DB に置くのは Cookie の値そのものではなく、その SHA-256。DB が漏れても
-    そのままセッションを乗っ取れないようにするため。
-    """
+    """Cookie で渡すセッション。`token_hash` は Cookie の値の SHA-256。"""
 
     __tablename__ = "sessions"
 

@@ -1,7 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-# 名前の上限。実際に弾いているのはここだけで、`models.py` の `String(32)` は
-# SQLite が VARCHAR の長さを見ないため事実上ドキュメント。
 NAME_MAX_LENGTH = 32
 
 LOGIN_NAME = Field(

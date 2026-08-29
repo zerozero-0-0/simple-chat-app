@@ -25,8 +25,7 @@ async def signup(
     )
     db.add(user)
     try:
-        # 事前に検索せず一意制約に任せる。検索してから挿入すると、その間に
-        # 同じ名前が入りうる
+        # 名前の重複は `login_name` の一意制約で検出する
         await db.flush()
     except IntegrityError as error:
         await db.rollback()

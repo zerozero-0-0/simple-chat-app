@@ -48,7 +48,7 @@ async def issue_session(db: AsyncSession, user: User, response: Response) -> Non
 async def revoke_session(
     db: AsyncSession, token: str | None, response: Response
 ) -> None:
-    """Cookie が無効でも Cookie は消す。ログアウトは何度呼んでも同じ結果にする。"""
+    """セッションを消して Cookie を落とす。何度呼んでも同じ結果になる。"""
     if token is not None:
         await db.execute(delete(Session).where(Session.token_hash == hash_token(token)))
         await db.commit()
