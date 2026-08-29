@@ -70,6 +70,25 @@ DB アクセスは SQLAlchemy 2.0 の非同期構成(aiosqlite)。ORM モデル�
 ## レビュー
 フォーマット・lint・型エラーは pre-commit と GitHub Actions が ruff / ty / Biome / ESLint / pytest で担保しているため、指摘の対象外とする。
 
+コミット前のレビューは `code-reviewer` サブエージェントが行う。
+実装した本人とは別のコンテキストで起動するため、実装の経緯を知らない視点でコードだけを見る。
+
+```
+git add ...
+git commit          ← PreToolUse フックが deny
+Agent(code-reviewer) ← staged 差分を独立レビュー。指摘が無ければゲートを解除
+git commit          ← 通る
+```
+
+ゲートの印は staged 差分のハッシュなので、指摘を直して `git add` し直すと再レビューになる。
+`-a` や pathspec を付けた commit は index 以外から中身が決まり、レビューした差分と
+実際にコミットされる内容がずれるため deny される。`git add` で明示的に stage してから、
+オプション無しで commit する。
+
+`git add ... && git commit ...` のように 1 つのコマンドで stage と commit をまとめるのも
+同じ理由で deny される。フックは commit の前に走るので、レビューした差分と実際に
+コミットされる内容が変わってしまう。stage、レビュー、commit は別々のコマンドで実行する。
+
 重点を置く箇所
 - API と DB 設計の一貫性、および上記「設計」との整合
 - 認証とセッションの扱い
