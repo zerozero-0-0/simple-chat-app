@@ -46,6 +46,16 @@ API ドキュメントは http://localhost:8000/docs で確認できます。
 起動する場所に関わらず `backend/.env` を読むので、リポジトリルートから uvicorn を
 起動しても、`--directory backend` で pytest を走らせても同じ設定になります。
 
+| キー | 既定 | 用途 |
+| -- | -- | -- |
+| `APP_ENVIRONMENT` | `development` | `production` にするとセッション Cookie が `Secure` になる |
+| `APP_DATABASE_URL` | `backend/chat.db` | 接続先 |
+| `APP_CORS_ORIGINS` | `["http://localhost:3000"]` | 許可するオリジン |
+| `APP_SESSION_TTL_HOURS` | `336` (14 日) | セッションの有効期限 |
+
+本番は `APP_ENVIRONMENT=production` を設定してください。TLS はリバースプロキシ側で
+終端する前提で、uvicorn は平文で受けます。
+
 ## テスト
 
 ```bash

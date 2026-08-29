@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,12 +16,22 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=BACKEND_DIR / ".env", env_prefix="APP_")
 
+    environment: Literal["development", "production"] = "development"
+
     database_url: str = f"sqlite+aiosqlite:///{(BACKEND_DIR / 'chat.db').as_posix()}"
     cors_origins: list[str] = ["http://localhost:3000"]
 
     session_ttl_hours: int = 24 * 14
-    # 本番は HTTPS 前提で有効にする。ローカルは http なので既定は無効
-    session_cookie_secure: bool = False
+
+    @property
+    def session_cookie_secure(self) -> bool:
+        """本番では HTTPS でしか Cookie を送らせない。
+
+        設定を足し忘れると平文で飛ぶ、という向きの間違いをしないよう
+        `environment` から導出する。ローカルは http なので無効にしないと、
+        サーバーは 200 を返すのにブラウザが Cookie を捨てる。
+        """
+        return self.environment == "production"
 
 
 settings = Settings()

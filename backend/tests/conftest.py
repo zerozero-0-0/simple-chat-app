@@ -5,8 +5,19 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from app.config import settings
 from app.db import Base, get_session
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def development_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """外の `APP_ENVIRONMENT` にスイート全体が左右されないようにする。
+
+    本番相当の設定を入れたシェルで走らせると、Cookie に `Secure` が付いて
+    `http://test` 越しの httpx が Cookie を保持しなくなり、認証まわりが軒並み落ちる。
+    """
+    monkeypatch.setattr(settings, "environment", "development")
 
 
 @pytest.fixture

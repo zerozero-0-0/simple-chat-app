@@ -1,9 +1,11 @@
 from datetime import timedelta
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.deps import SESSION_COOKIE_NAME, hash_token
 from app.models import Session, User, utcnow
 
@@ -84,6 +86,28 @@ async def test_session_cookie_is_http_only(client: AsyncClient) -> None:
     assert cookie.startswith(f"{SESSION_COOKIE_NAME}=")
     assert "HttpOnly" in cookie
     assert "SameSite=lax" in cookie
+
+
+@pytest.mark.parametrize(
+    ("environment", "secure"),
+    [("production", True), ("development", False)],
+)
+async def test_session_cookie_is_secure_only_in_production(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    environment: str,
+    secure: bool,
+) -> None:
+    """本番では HTTPS でしか Cookie を送らせない。
+
+    ローカルは http なので、付けるとサーバーが 200 を返してもブラウザが Cookie を
+    捨てる。どちらの向きも壊れるので両方を見る。
+    """
+    monkeypatch.setattr(settings, "environment", environment)
+
+    response = await client.post("/api/auth/signup", json={"login_name": "alice"})
+
+    assert ("Secure" in response.headers["set-cookie"]) is secure
 
 
 async def test_cookie_value_is_not_stored(
