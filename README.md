@@ -49,7 +49,7 @@ API ドキュメントは http://localhost:8000/docs で確認できます。
 | キー | 既定 | 用途 |
 | -- | -- | -- |
 | `APP_ENVIRONMENT` | `development` | `production` にするとセッション Cookie が `Secure` になる |
-| `APP_DATABASE_URL` | `backend/chat.db` | 接続先 |
+| `APP_DATABASE_URL` | `sqlite+aiosqlite:///` + `backend/chat.db` の絶対パス | SQLAlchemy の接続 URL |
 | `APP_CORS_ORIGINS` | `["http://localhost:3000"]` | 許可するオリジン |
 | `APP_SESSION_TTL_HOURS` | `336` (14 日) | セッションの有効期限 |
 
