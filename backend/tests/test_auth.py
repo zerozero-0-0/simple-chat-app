@@ -198,6 +198,33 @@ async def test_logout_leaves_other_sessions_alone(
     assert [row.token_hash for row in remaining] == [hash_token(first_token)]
 
 
+@pytest.mark.parametrize("field", ["login_name", "display_name"])
+async def test_name_of_32_characters_is_accepted(
+    client: AsyncClient, field: str
+) -> None:
+    payload = {"login_name": "alice", field: "a" * 32}
+
+    response = await client.post("/api/auth/signup", json=payload)
+
+    assert response.status_code == 201
+
+
+@pytest.mark.parametrize("field", ["login_name", "display_name"])
+async def test_name_of_33_characters_is_rejected(
+    client: AsyncClient, field: str
+) -> None:
+    """公開している上限そのものを固定する。
+
+    実装の定数から期待値を作ると、上限を変えてもテストが緑のままになる。
+    UI にも 32 と出すので、ここは実装と独立にリテラルで書く。
+    """
+    payload = {"login_name": "alice", field: "a" * 33}
+
+    response = await client.post("/api/auth/signup", json=payload)
+
+    assert response.status_code == 422
+
+
 async def test_login_name_must_be_usable_in_a_url(client: AsyncClient) -> None:
     response = await client.post("/api/auth/signup", json={"login_name": "a b/c"})
 
