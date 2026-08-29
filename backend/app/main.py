@@ -4,9 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import models  # noqa: F401  # create_all の前にテーブルを登録する
 from app.config import settings
 from app.db import Base, engine
-from app.routers import health
+from app.routers import auth, health
 
 
 @asynccontextmanager
@@ -28,3 +29,4 @@ app.add_middleware(
 )
 
 app.include_router(health.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")

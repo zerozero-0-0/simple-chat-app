@@ -18,5 +18,9 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite+aiosqlite:///{(BACKEND_DIR / 'chat.db').as_posix()}"
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    session_ttl_hours: int = 24 * 14
+    # 本番は HTTPS 前提で有効にする。ローカルは http なので既定は無効
+    session_cookie_secure: bool = False
+
 
 settings = Settings()
