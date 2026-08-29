@@ -33,10 +33,24 @@ pre-commit install
 ## 開発
 
 ```bash
+# フロントエンド http://localhost:3000
 pnpm --dir frontend dev
+
+# バックエンド http://localhost:8000
+uv run --project backend uvicorn app.main:app --reload --app-dir backend
 ```
 
-http://localhost:3000 で開発サーバーが起動します。
+API ドキュメントは http://localhost:8000/docs で確認できます。
+
+バックエンドの設定は環境変数と `backend/.env` から読みます(接頭辞 `APP_`)。
+起動する場所に関わらず `backend/.env` を読むので、リポジトリルートから uvicorn を
+起動しても、`--directory backend` で pytest を走らせても同じ設定になります。
+
+## テスト
+
+```bash
+uv run --directory backend pytest
+```
 
 ## コード品質
 
