@@ -46,3 +46,11 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
         yield client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def other_device(client: AsyncClient) -> AsyncIterator[AsyncClient]:
+    """同じサーバーに繋ぐ 2 台目の端末。Cookie は `client` と別に持つ。"""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as other:
+        yield other

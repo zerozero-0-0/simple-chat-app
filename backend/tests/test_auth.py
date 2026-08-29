@@ -179,23 +179,15 @@ async def test_logout_without_session_succeeds(client: AsyncClient) -> None:
     assert response.status_code == 204
 
 
-async def test_logout_leaves_other_sessions_alone(
-    client: AsyncClient, session: AsyncSession
+async def test_logout_leaves_other_devices_signed_in(
+    client: AsyncClient, other_device: AsyncClient
 ) -> None:
-    """別の端末のセッションまで切らないこと。
-
-    2 回目のログインで Cookie が入れ替わるので、logout が切るのは 2 本目だけ。
-    1 本目は別の端末に残っているものとして扱う。
-    """
     await signup(client)
-    first_token = client.cookies[SESSION_COOKIE_NAME]
-    await client.post("/api/auth/login", json={"login_name": "alice"})
-    assert client.cookies[SESSION_COOKIE_NAME] != first_token
+    await other_device.post("/api/auth/login", json={"login_name": "alice"})
 
     await client.post("/api/auth/logout")
 
-    remaining = (await session.scalars(select(Session))).all()
-    assert [row.token_hash for row in remaining] == [hash_token(first_token)]
+    assert (await other_device.get("/api/auth/me")).status_code == 200
 
 
 @pytest.mark.parametrize("field", ["login_name", "display_name"])
