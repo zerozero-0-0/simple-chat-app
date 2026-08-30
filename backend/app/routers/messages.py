@@ -1,13 +1,23 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, Response, WebSocket, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
+from starlette.websockets import WebSocketDisconnect
 
-from app.deps import CurrentUser, DbSession, MemberRoom
-from app.models import Message
+from app.deps import (
+    SESSION_COOKIE_NAME,
+    CurrentUser,
+    DbSession,
+    MemberRoom,
+    find_session_user,
+    get_member_room,
+    hash_token,
+)
+from app.models import Message, Room
 from app.schemas import MessageCreateRequest, MessageResponse
+from app.stream import close_quietly, stream
 
 router = APIRouter(prefix="/rooms/{public_id}/messages", tags=["messages"])
 
@@ -42,10 +52,13 @@ async def send_message(
             # 再送ではない衝突。原因を握りつぶさない
             raise
 
+        # 既に配ってあるので、配り直さない
         response.status_code = status.HTTP_200_OK
         return resent
 
-    return MessageResponse.model_validate(message)
+    sent = MessageResponse.model_validate(message)
+    await stream.publish(room_id, sent)
+    return sent
 
 
 @router.get("")
@@ -84,3 +97,57 @@ async def _find_resent(
         .options(selectinload(Message.sender))
     )
     return MessageResponse.model_validate(message) if message is not None else None
+
+
+@router.websocket("/stream")
+async def stream_messages(websocket: WebSocket, public_id: str, db: DbSession) -> None:
+    """つないでいる間、新しいメッセージを受け取る。
+
+    切断中に届いたものは `GET ?after=<id>` で取り直す。
+    """
+    token = websocket.cookies.get(SESSION_COOKIE_NAME)
+    room = await _accept(websocket, public_id, db)
+    if room is None or token is None:
+        return
+
+    room_id = room.id
+    stream.add(room_id, hash_token(token), websocket)
+
+    # 登録するまでの間にログアウトされると、close_session が空振りしたまま
+    # 取り消し済みのセッションで登録が残る。登録してから確かめ直す
+    if await find_session_user(db, token) is None:
+        stream.remove(websocket)
+        # close_session が先に切っている場合がある
+        await close_quietly(websocket)
+        return
+
+    # 接続が続く間セッションを握らないよう、認証が済んだら閉じる
+    await db.close()
+    try:
+        while True:
+            # クライアントからは送らない。切断を知るために読む。フレームの
+            # 種別に依らないよう receive_text ではなく receive を使う
+            if (await websocket.receive())["type"] == "websocket.disconnect":
+                break
+    except WebSocketDisconnect:
+        pass
+    finally:
+        stream.remove(websocket)
+
+
+async def _accept(websocket: WebSocket, public_id: str, db: DbSession) -> Room | None:
+    """認証と入室を確かめて接続を受ける。断るときは None を返す。"""
+    token = websocket.cookies.get(SESSION_COOKIE_NAME)
+    user = await find_session_user(db, token) if token is not None else None
+    if user is None:
+        await close_quietly(websocket)
+        return None
+
+    try:
+        room = await get_member_room(public_id, user, db)
+    except HTTPException:
+        await close_quietly(websocket)
+        return None
+
+    await websocket.accept()
+    return room

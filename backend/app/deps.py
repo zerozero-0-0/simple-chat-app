@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.db import get_session
 from app.models import Room, RoomMember, Session, User, utcnow
+from app.stream import stream
 
 SESSION_COOKIE_NAME = "session_id"
 
@@ -65,8 +66,32 @@ async def revoke_session(
     if token is not None:
         await db.execute(delete(Session).where(Session.token_hash == hash_token(token)))
         await db.commit()
+        # WebSocket はセッションを接続時にしか見ない。ここで切る
+        await stream.close_session(hash_token(token))
 
     response.delete_cookie(SESSION_COOKIE_NAME)
+
+
+async def find_session_user(db: AsyncSession, token: str) -> User | None:
+    """Cookie の値からユーザーを引く。期限切れのセッションは消して None を返す。
+
+    WebSocket からも使う。Cookie の貼り直しは HTTP のリクエストに任せる。
+    """
+    session = await db.scalar(
+        select(Session)
+        .where(Session.token_hash == hash_token(token))
+        .options(selectinload(Session.user))
+    )
+    if session is None:
+        return None
+
+    if session.expires_at <= utcnow():
+        await db.delete(session)
+        await db.commit()
+        return None
+
+    await _extend(db, session)
+    return session.user
 
 
 async def get_current_user(
@@ -75,24 +100,14 @@ async def get_current_user(
     if session_id is None:
         raise _unauthenticated()
 
-    session = await db.scalar(
-        select(Session)
-        .where(Session.token_hash == hash_token(session_id))
-        .options(selectinload(Session.user))
-    )
-    if session is None:
-        raise _unauthenticated()
-
-    if session.expires_at <= utcnow():
-        await db.delete(session)
-        await db.commit()
+    user = await find_session_user(db, session_id)
+    if user is None:
         raise _unauthenticated()
 
     # エラー応答では依存関係が載せた Set-Cookie が捨てられる。延長したときだけ
     # 貼り直すと、DB と Cookie の期限がずれたまま戻らなくなる
     set_session_cookie(response, session_id)
-    await _extend(db, session)
-    return session.user
+    return user
 
 
 async def _extend(db: AsyncSession, session: Session) -> None:
