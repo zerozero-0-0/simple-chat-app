@@ -50,8 +50,11 @@ API ドキュメントは http://localhost:8000/docs で確認できます。
 | -- | -- | -- |
 | `APP_DATABASE_URL` | `sqlite+aiosqlite:///` + `backend/chat.db` の絶対パス | SQLAlchemy の接続 URL |
 | `APP_CORS_ORIGINS` | `["http://localhost:3000"]` | 許可するオリジン。JSON 配列で渡す |
-| `APP_SESSION_TTL_HOURS` | `336` (14 日) | セッションの有効期限 |
+| `APP_SESSION_TTL_HOURS` | `336` (14 日) | セッションの猶予 |
 | `APP_SESSION_COOKIE_SECURE` | `false` | セッション Cookie の `Secure`。https に移すとき `true` にする |
+
+セッションは使うたびに期限が延びます。残りが猶予の半分を切ったときに延ばすので、
+最後に使ってから 7 日〜14 日の間に切れます。
 
 ### 将来的なhttps以降手順
 

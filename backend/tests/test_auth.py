@@ -159,6 +159,55 @@ async def test_expired_session_is_removed(
     assert (await session.scalars(select(Session))).all() == []
 
 
+async def test_using_a_session_extends_it(
+    client: AsyncClient, session: AsyncSession
+) -> None:
+    """使っている限りログアウトされないこと。"""
+    await signup(client)
+    ttl = timedelta(hours=settings.session_ttl_hours)
+    stored = await session.scalar(select(Session))
+    assert stored is not None
+    stored.expires_at = utcnow() + ttl / 4
+    await session.commit()
+
+    await client.get("/api/auth/me")
+
+    await session.refresh(stored)
+    assert stored.expires_at > utcnow() + ttl * 0.9
+
+
+async def test_every_authenticated_request_refreshes_the_cookie(
+    client: AsyncClient,
+) -> None:
+    """DB を書かないときも Cookie は貼り直すこと。
+
+    エラー応答では依存関係が載せた Set-Cookie が捨てられる。延長したときだけ
+    貼り直すと、一度ずれた期限が戻らないまま Cookie が先に切れる。
+    """
+    await signup(client)
+
+    response = await client.get("/api/auth/me")
+
+    cookie = response.headers["set-cookie"]
+    assert cookie.startswith(f"{SESSION_COOKIE_NAME}=")
+    assert f"Max-Age={settings.session_ttl_hours * 3600}" in cookie
+
+
+async def test_a_session_with_time_left_is_not_written_again(
+    client: AsyncClient, session: AsyncSession
+) -> None:
+    """読むだけのリクエストで毎回 DB に書かないこと。"""
+    await signup(client)
+    stored = await session.scalar(select(Session))
+    assert stored is not None
+    before = stored.expires_at
+
+    await client.get("/api/auth/me")
+
+    await session.refresh(stored)
+    assert stored.expires_at == before
+
+
 async def test_logout_ends_the_session(client: AsyncClient) -> None:
     await signup(client)
 
