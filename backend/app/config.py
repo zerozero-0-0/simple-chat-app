@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite+aiosqlite:///{(BACKEND_DIR / 'chat.db').as_posix()}"
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # セッションの猶予。残りが半分を切ると延びるので、最後に使ってから
+    # 最短でこの半分は保つ
     session_ttl_hours: int = 24 * 14  # 14日間
     session_cookie_secure: bool = False
 

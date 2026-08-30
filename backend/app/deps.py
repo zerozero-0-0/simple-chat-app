@@ -16,6 +16,10 @@ from app.models import Session, User, utcnow
 
 SESSION_COOKIE_NAME = "session_id"
 
+# 期限までの残りがこの割合を切ったら DB を書き換える。毎回書き込むと、
+# 読むだけのリクエストでも DB に書くことになる
+REFRESH_AT = 0.5
+
 DbSession = Annotated[AsyncSession, Depends(get_session)]
 SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)]
 
@@ -24,25 +28,34 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-async def issue_session(db: AsyncSession, user: User, response: Response) -> None:
-    """セッションを作り、Cookie に載せる。Cookie に入るのは DB に無い生の値。"""
-    token = secrets.token_urlsafe(32)
-    ttl = timedelta(hours=settings.session_ttl_hours)
-    db.add(
-        Session(
-            token_hash=hash_token(token), user_id=user.id, expires_at=utcnow() + ttl
-        )
-    )
-    await db.commit()
+def session_ttl() -> timedelta:
+    return timedelta(hours=settings.session_ttl_hours)
 
+
+def set_session_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         SESSION_COOKIE_NAME,
         token,
-        max_age=int(ttl.total_seconds()),
+        max_age=int(session_ttl().total_seconds()),
         httponly=True,
         secure=settings.session_cookie_secure,
         samesite="lax",
     )
+
+
+async def issue_session(db: AsyncSession, user: User, response: Response) -> None:
+    """セッションを作り、Cookie に載せる。Cookie に入るのは DB に無い生の値。"""
+    token = secrets.token_urlsafe(32)
+    db.add(
+        Session(
+            token_hash=hash_token(token),
+            user_id=user.id,
+            expires_at=utcnow() + session_ttl(),
+        )
+    )
+    await db.commit()
+
+    set_session_cookie(response, token)
 
 
 async def revoke_session(
@@ -56,7 +69,9 @@ async def revoke_session(
     response.delete_cookie(SESSION_COOKIE_NAME)
 
 
-async def get_current_user(db: DbSession, session_id: SessionCookie = None) -> User:
+async def get_current_user(
+    db: DbSession, response: Response, session_id: SessionCookie = None
+) -> User:
     if session_id is None:
         raise _unauthenticated()
 
@@ -73,7 +88,25 @@ async def get_current_user(db: DbSession, session_id: SessionCookie = None) -> U
         await db.commit()
         raise _unauthenticated()
 
+    # エラー応答では依存関係が載せた Set-Cookie が捨てられる。延長したときだけ
+    # 貼り直すと、DB と Cookie の期限がずれたまま戻らなくなる
+    set_session_cookie(response, session_id)
+    await _extend(db, session)
     return session.user
+
+
+async def _extend(db: AsyncSession, session: Session) -> None:
+    """使われている限り期限を先に延ばす。
+
+    残りが半分を切ったときだけ書き戻すので、最後に使ってから TTL の半分から
+    TTL までの間に切れる。
+    """
+    ttl = session_ttl()
+    if session.expires_at - utcnow() > ttl * REFRESH_AT:
+        return
+
+    session.expires_at = utcnow() + ttl
+    await db.commit()
 
 
 def _unauthenticated() -> HTTPException:
