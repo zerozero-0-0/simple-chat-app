@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -82,3 +82,25 @@ class RoomMember(Base):
 
     room: Mapped[Room] = relationship(back_populates="members")
     user: Mapped[User] = relationship(back_populates="memberships")
+
+
+class Message(Base):
+    """連番の `id` をそのまま公開し、`?after=<id>` のカーソルに使う。
+
+    `client_message_id` はクライアントが採番する。再送されても
+    `UNIQUE(room_id, sender_id, client_message_id)` で 2 通にならない。
+    送信者を含めるので、別のユーザーが同じ値を採番しても衝突しない。
+    """
+
+    __tablename__ = "messages"
+    __table_args__ = (UniqueConstraint("room_id", "sender_id", "client_message_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("rooms.id"), index=True)
+    sender_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    client_message_id: Mapped[str] = mapped_column(String(64))
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    room: Mapped[Room] = relationship()
+    sender: Mapped[User] = relationship()

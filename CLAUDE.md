@@ -42,7 +42,8 @@ LINE風の簡単なチャットアプリ
 
 ### メッセージ
 送信は REST、受信は WebSocket。
-クライアントが `client_message_id` を採番し、`UNIQUE(room_id, client_message_id)` で再送を冪等にする。
+クライアントが `client_message_id` を採番し、`UNIQUE(room_id, sender_id, client_message_id)` で
+再送を冪等にする。送信者を含めるので、別のユーザーが同じ値を採番しても衝突しない。
 
 ### 既読
 `room_members.last_read_message_id` の watermark 方式。

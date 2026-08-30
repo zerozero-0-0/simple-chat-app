@@ -9,7 +9,7 @@ from app import models  # noqa: F401  # create_all の前にテーブルを登�
 from app.config import settings
 from app.db import Base, engine, session_factory
 from app.models import Room
-from app.routers import auth, health, rooms
+from app.routers import auth, health, messages, rooms
 
 DEFAULT_ROOM_NAME = "みんなの部屋"
 
@@ -42,3 +42,4 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(rooms.router, prefix="/api")
+app.include_router(messages.router, prefix="/api")

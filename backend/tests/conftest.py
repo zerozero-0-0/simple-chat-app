@@ -64,3 +64,12 @@ async def room(session: AsyncSession) -> Room:
     session.add(room)
     await session.commit()
     return room
+
+
+@pytest.fixture
+async def other_room(session: AsyncSession) -> Room:
+    """一意制約や絞り込みが部屋ごとであることを見るための 2 つ目の部屋。"""
+    room = Room(name="べつの部屋")
+    session.add(room)
+    await session.commit()
+    return room
