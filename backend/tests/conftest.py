@@ -8,6 +8,7 @@ from sqlalchemy.pool import StaticPool
 from app.config import settings
 from app.db import Base, get_session
 from app.main import app
+from app.models import Room
 
 
 @pytest.fixture(autouse=True)
@@ -54,3 +55,12 @@ async def other_device(client: AsyncClient) -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as other:
         yield other
+
+
+@pytest.fixture
+async def room(session: AsyncSession) -> Room:
+    """共通の部屋。本番では lifespan が用意する。"""
+    room = Room(name="みんなの部屋")
+    session.add(room)
+    await session.commit()
+    return room
