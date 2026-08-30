@@ -25,3 +25,10 @@ class UserResponse(BaseModel):
     public_id: str
     login_name: str
     display_name: str
+
+
+class RoomResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str
+    name: str
