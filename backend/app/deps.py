@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.db import get_session
-from app.models import Session, User, utcnow
+from app.models import Room, RoomMember, Session, User, utcnow
 
 SESSION_COOKIE_NAME = "session_id"
 
@@ -114,3 +114,23 @@ def _unauthenticated() -> HTTPException:
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def get_member_room(public_id: str, user: CurrentUser, db: DbSession) -> Room:
+    """URL が指す部屋を返す。入室していなければ弾く。"""
+    room = await db.scalar(select(Room).where(Room.public_id == public_id))
+    if room is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "その部屋はありません")
+
+    member = await db.scalar(
+        select(RoomMember).where(
+            RoomMember.room_id == room.id, RoomMember.user_id == user.id
+        )
+    )
+    if member is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "この部屋に入っていません")
+
+    return room
+
+
+MemberRoom = Annotated[Room, Depends(get_member_room)]
