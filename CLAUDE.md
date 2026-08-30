@@ -45,10 +45,6 @@ LINE風の簡単なチャットアプリ
 クライアントが `client_message_id` を採番し、`UNIQUE(room_id, sender_id, client_message_id)` で
 再送を冪等にする。送信者を含めるので、別のユーザーが同じ値を採番しても衝突しない。
 
-### 既読
-`room_members.last_read_message_id` の watermark 方式。
-既読数は `last_read_message_id >= そのメッセージの id` のメンバー数。
-
 ### 構成
 ```
 backend/app/     main.py, config.py, db.py, models.py, schemas.py, deps.py, routers/

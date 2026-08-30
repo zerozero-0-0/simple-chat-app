@@ -80,18 +80,6 @@ async def test_each_user_gets_their_own_membership(
     assert await session.scalar(select(func.count()).select_from(RoomMember)) == 2
 
 
-async def test_a_new_member_has_read_nothing(
-    client: AsyncClient, session: AsyncSession, room: Room
-) -> None:
-    await signup(client)
-
-    await client.post(f"/api/rooms/{room.public_id}/members")
-
-    member = await session.scalar(select(RoomMember))
-    assert member is not None
-    assert member.last_read_message_id is None
-
-
 async def test_public_id_differs_from_internal_id(
     session: AsyncSession, room: Room
 ) -> None:

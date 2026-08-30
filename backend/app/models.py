@@ -69,7 +69,7 @@ class Room(Base):
 
 
 class RoomMember(Base):
-    """誰がどの部屋にいるか。既読は `last_read_message_id` の watermark で持つ。"""
+    """誰がどの部屋にいるか。"""
 
     __tablename__ = "room_members"
     __table_args__ = (UniqueConstraint("room_id", "user_id"),)
@@ -77,7 +77,6 @@ class RoomMember(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     room_id: Mapped[int] = mapped_column(ForeignKey("rooms.id"), index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    last_read_message_id: Mapped[int | None] = mapped_column(default=None)
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     room: Mapped[Room] = relationship(back_populates="members")
