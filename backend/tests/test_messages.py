@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Message, Room
+from app.routers import messages
 
 
 async def enter(client: AsyncClient, room: Room, login_name: str = "alice") -> None:
@@ -228,6 +231,39 @@ async def test_sending_requires_a_session(client: AsyncClient, room: Room) -> No
     )
 
     assert response.status_code == 401
+
+
+async def test_listing_requires_a_session(client: AsyncClient, room: Room) -> None:
+    response = await client.get(f"/api/rooms/{room.public_id}/messages")
+
+    assert response.status_code == 401
+
+
+async def test_an_unknown_room_looks_the_same_before_login(
+    client: AsyncClient, room: Room
+) -> None:
+    """ログイン前は、部屋の有無も入室状態も返さないこと。"""
+    known = await client.get(f"/api/rooms/{room.public_id}/messages")
+    unknown = await client.get("/api/rooms/deadbeef/messages")
+
+    assert known.status_code == 401
+    assert unknown.status_code == 401
+
+
+async def test_a_conflict_that_is_not_a_resend_is_not_reported_as_success(
+    client: AsyncClient, room: Room, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """再送として取り出せない衝突を 200 にしないこと。"""
+    await enter(client, room)
+    await client.post(f"/api/rooms/{room.public_id}/messages", json=payload())
+
+    async def not_found(*args: object, **kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(messages, "_find_resent", not_found)
+
+    with pytest.raises(IntegrityError):
+        await client.post(f"/api/rooms/{room.public_id}/messages", json=payload())
 
 
 async def test_sending_to_an_unknown_room_is_rejected(client: AsyncClient) -> None:

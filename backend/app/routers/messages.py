@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -37,8 +37,13 @@ async def send_message(
         await db.commit()
     except IntegrityError:
         await db.rollback()
+        resent = await _find_resent(db, room_id, sender_id, payload.client_message_id)
+        if resent is None:
+            # 再送ではない衝突。原因を握りつぶさない
+            raise
+
         response.status_code = status.HTTP_200_OK
-        return await _find_resent(db, room_id, sender_id, payload.client_message_id)
+        return resent
 
     return MessageResponse.model_validate(message)
 
@@ -67,7 +72,8 @@ async def list_messages(
 
 async def _find_resent(
     db: DbSession, room_id: int, sender_id: int, client_message_id: str
-) -> MessageResponse:
+) -> MessageResponse | None:
+    """同じ送信者が同じ `client_message_id` で送った既存のメッセージ。"""
     message = await db.scalar(
         select(Message)
         .where(
@@ -77,9 +83,4 @@ async def _find_resent(
         )
         .options(selectinload(Message.sender))
     )
-    if message is None:
-        raise HTTPException(
-            status.HTTP_500_INTERNAL_SERVER_ERROR, "メッセージを取得できませんでした"
-        )
-
-    return MessageResponse.model_validate(message)
+    return MessageResponse.model_validate(message) if message is not None else None
