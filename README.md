@@ -46,6 +46,25 @@ API ドキュメントは http://localhost:8000/docs で確認できます。
 起動する場所に関わらず `backend/.env` を読むので、リポジトリルートから uvicorn を
 起動しても、`--directory backend` で pytest を走らせても同じ設定になります。
 
+| キー | 既定 | 用途 |
+| -- | -- | -- |
+| `APP_DATABASE_URL` | `sqlite+aiosqlite:///` + `backend/chat.db` の絶対パス | SQLAlchemy の接続 URL |
+| `APP_CORS_ORIGINS` | `["http://localhost:3000"]` | 許可するオリジン。JSON 配列で渡す |
+| `APP_SESSION_TTL_HOURS` | `336` (14 日) | セッションの有効期限 |
+| `APP_SESSION_COOKIE_SECURE` | `false` | セッション Cookie の `Secure`。https に移すとき `true` にする |
+
+### 将来的なhttps以降手順
+
+いまは http で運用しているため、セッション Cookie に `Secure` は付きません。
+https に移すときは次の 3 つを変更します。
+
+1. `APP_SESSION_COOKIE_SECURE=true` を設定する
+2. `APP_CORS_ORIGINS` を https のオリジンにする
+3. リバースプロキシで TLS を終端し、80 番は 443 へリダイレクトする
+
+`Secure` を付けた Cookie はブラウザが https でしか送らないので、1 だけを先に設定すると
+ログインが成立しません。3 つをまとめて切り替えてください。
+
 ## テスト
 
 ```bash

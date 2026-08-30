@@ -36,3 +36,12 @@ def test_default_database_lives_in_backend(monkeypatch: pytest.MonkeyPatch) -> N
     path = Path(database_url.removeprefix(SQLITE_PREFIX))
     assert path.is_absolute()
     assert path.parent == BACKEND_DIR
+
+
+def test_session_cookie_is_not_secure_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """いまは http で運用しているので、既定では付けない。"""
+    monkeypatch.delenv("APP_SESSION_COOKIE_SECURE", raising=False)
+
+    assert not Settings(_env_file=None).session_cookie_secure
