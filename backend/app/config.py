@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
 
     session_ttl_hours: int = 24 * 14
-    session_cookie_secure: bool = True
+    session_cookie_secure: bool = False
 
 
 settings = Settings()

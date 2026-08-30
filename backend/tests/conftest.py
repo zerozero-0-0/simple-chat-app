@@ -11,9 +11,9 @@ from app.main import app
 
 
 @pytest.fixture(autouse=True)
-def secure_session_cookie(monkeypatch: pytest.MonkeyPatch) -> None:
+def plain_session_cookie(monkeypatch: pytest.MonkeyPatch) -> None:
     """外の `APP_SESSION_COOKIE_SECURE` からスイート全体を隔離する。"""
-    monkeypatch.setattr(settings, "session_cookie_secure", True)
+    monkeypatch.setattr(settings, "session_cookie_secure", False)
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ async def session() -> AsyncIterator[AsyncSession]:
 async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
     app.dependency_overrides[get_session] = lambda: session
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="https://test") as client:
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
     app.dependency_overrides.clear()
@@ -52,5 +52,5 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
 async def other_device(client: AsyncClient) -> AsyncIterator[AsyncClient]:
     """同じサーバーに繋ぐ 2 台目の端末。Cookie は `client` と別に持つ。"""
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="https://test") as other:
+    async with AsyncClient(transport=transport, base_url="http://test") as other:
         yield other

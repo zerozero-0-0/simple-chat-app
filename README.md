@@ -51,16 +51,19 @@ API ドキュメントは http://localhost:8000/docs で確認できます。
 | `APP_DATABASE_URL` | `sqlite+aiosqlite:///` + `backend/chat.db` の絶対パス | SQLAlchemy の接続 URL |
 | `APP_CORS_ORIGINS` | `["http://localhost:3000"]` | 許可するオリジン。JSON 配列で渡す |
 | `APP_SESSION_TTL_HOURS` | `336` (14 日) | セッションの有効期限 |
-| `APP_SESSION_COOKIE_SECURE` | `true` | セッション Cookie の `Secure` |
+| `APP_SESSION_COOKIE_SECURE` | `false` | セッション Cookie の `Secure`。https に移すとき `true` にする |
 
-### セッション Cookie の `Secure`
+### https に移すとき
 
-既定で付きます。本番で設定を足す必要はありません。
+いまは http で運用しているため、セッション Cookie に `Secure` は付きません。
+https に移すときは次の 3 つを変更します。
 
-`http://localhost` は W3C が potentially trustworthy origin と定めており、ブラウザは
-`Secure` 付き Cookie を受け付けるので、ローカル開発でもそのまま動きます。LAN の IP
-(`http://192.168.x.x`) を開いて実機で確認するときだけ `APP_SESSION_COOKIE_SECURE=false`
-を設定してください。
+1. `APP_SESSION_COOKIE_SECURE=true` を設定する
+2. `APP_CORS_ORIGINS` を https のオリジンにする
+3. リバースプロキシで TLS を終端し、80 番は 443 へリダイレクトする
+
+`Secure` を付けた Cookie はブラウザが https でしか送らないので、1 だけを先に設定すると
+ログインが成立しません。3 つをまとめて切り替えてください。
 
 ## テスト
 

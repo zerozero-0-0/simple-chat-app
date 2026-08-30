@@ -88,21 +88,21 @@ async def test_session_cookie_is_http_only(client: AsyncClient) -> None:
     assert "SameSite=lax" in cookie
 
 
-async def test_session_cookie_is_secure(client: AsyncClient) -> None:
-    response = await client.post("/api/auth/signup", json={"login_name": "alice"})
-
-    assert "Secure" in response.headers["set-cookie"]
-
-
-async def test_session_cookie_can_be_opened_up_for_plain_http(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """LAN の IP で実機確認するときのための逃げ道。"""
-    monkeypatch.setattr(settings, "session_cookie_secure", False)
-
+async def test_session_cookie_is_not_secure_over_http(client: AsyncClient) -> None:
     response = await client.post("/api/auth/signup", json={"login_name": "alice"})
 
     assert "Secure" not in response.headers["set-cookie"]
+
+
+async def test_session_cookie_can_be_marked_secure(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """https に移すときはこの設定だけを変える。"""
+    monkeypatch.setattr(settings, "session_cookie_secure", True)
+
+    response = await client.post("/api/auth/signup", json={"login_name": "alice"})
+
+    assert "Secure" in response.headers["set-cookie"]
 
 
 async def test_cookie_value_is_not_stored(
