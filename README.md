@@ -53,7 +53,7 @@ API ドキュメントは http://localhost:8000/docs で確認できます。
 | `APP_SESSION_TTL_HOURS` | `336` (14 日) | セッションの有効期限 |
 | `APP_SESSION_COOKIE_SECURE` | `false` | セッション Cookie の `Secure`。https に移すとき `true` にする |
 
-### https に移すとき
+### 将来的なhttps以降手順
 
 いまは http で運用しているため、セッション Cookie に `Secure` は付きません。
 https に移すときは次の 3 つを変更します。
