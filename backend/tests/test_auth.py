@@ -88,26 +88,21 @@ async def test_session_cookie_is_http_only(client: AsyncClient) -> None:
     assert "SameSite=lax" in cookie
 
 
-@pytest.mark.parametrize(
-    ("environment", "secure"),
-    [("production", True), ("development", False)],
-)
-async def test_session_cookie_is_secure_only_in_production(
-    client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-    environment: str,
-    secure: bool,
-) -> None:
-    """本番では HTTPS でしか Cookie を送らせない。
+async def test_session_cookie_is_secure(client: AsyncClient) -> None:
+    response = await client.post("/api/auth/signup", json={"login_name": "alice"})
 
-    ローカルは http なので、付けるとサーバーが 200 を返してもブラウザが Cookie を
-    捨てる。どちらの向きも壊れるので両方を見る。
-    """
-    monkeypatch.setattr(settings, "environment", environment)
+    assert "Secure" in response.headers["set-cookie"]
+
+
+async def test_session_cookie_can_be_opened_up_for_plain_http(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """LAN の IP で実機確認するときのための逃げ道。"""
+    monkeypatch.setattr(settings, "session_cookie_secure", False)
 
     response = await client.post("/api/auth/signup", json={"login_name": "alice"})
 
-    assert ("Secure" in response.headers["set-cookie"]) is secure
+    assert "Secure" not in response.headers["set-cookie"]
 
 
 async def test_cookie_value_is_not_stored(

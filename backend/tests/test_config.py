@@ -38,17 +38,8 @@ def test_default_database_lives_in_backend(monkeypatch: pytest.MonkeyPatch) -> N
     assert path.parent == BACKEND_DIR
 
 
-def test_production_marks_the_session_cookie_secure() -> None:
-    """本番では設定を足さなくても HTTPS でしか Cookie を送らせないこと。"""
-    assert Settings(_env_file=None, environment="production").session_cookie_secure
+def test_session_cookie_is_secure_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """設定を足さなくても Secure が付くこと。"""
+    monkeypatch.delenv("APP_SESSION_COOKIE_SECURE", raising=False)
 
-
-def test_development_leaves_the_session_cookie_usable_over_http() -> None:
-    """ローカルは http なので、有効にするとブラウザが Cookie を捨てる。"""
-    assert not Settings(_env_file=None, environment="development").session_cookie_secure
-
-
-def test_environment_defaults_to_development(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("APP_ENVIRONMENT", raising=False)
-
-    assert Settings(_env_file=None).environment == "development"
+    assert Settings(_env_file=None).session_cookie_secure

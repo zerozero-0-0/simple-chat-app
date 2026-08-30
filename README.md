@@ -48,13 +48,19 @@ API ドキュメントは http://localhost:8000/docs で確認できます。
 
 | キー | 既定 | 用途 |
 | -- | -- | -- |
-| `APP_ENVIRONMENT` | `development` | `production` にするとセッション Cookie が `Secure` になる |
 | `APP_DATABASE_URL` | `sqlite+aiosqlite:///` + `backend/chat.db` の絶対パス | SQLAlchemy の接続 URL |
-| `APP_CORS_ORIGINS` | `["http://localhost:3000"]` | 許可するオリジン |
+| `APP_CORS_ORIGINS` | `["http://localhost:3000"]` | 許可するオリジン。JSON 配列で渡す |
 | `APP_SESSION_TTL_HOURS` | `336` (14 日) | セッションの有効期限 |
+| `APP_SESSION_COOKIE_SECURE` | `true` | セッション Cookie の `Secure` |
 
-本番は `APP_ENVIRONMENT=production` を設定してください。TLS はリバースプロキシ側で
-終端する前提で、uvicorn は平文で受けます。
+### セッション Cookie の `Secure`
+
+既定で付きます。本番で設定を足す必要はありません。
+
+`http://localhost` は W3C が potentially trustworthy origin と定めており、ブラウザは
+`Secure` 付き Cookie を受け付けるので、ローカル開発でもそのまま動きます。LAN の IP
+(`http://192.168.x.x`) を開いて実機で確認するときだけ `APP_SESSION_COOKIE_SECURE=false`
+を設定してください。
 
 ## テスト
 
