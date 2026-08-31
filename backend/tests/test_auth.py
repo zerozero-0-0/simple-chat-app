@@ -261,8 +261,16 @@ async def test_name_of_33_characters_is_rejected(
     assert response.status_code == 422
 
 
-async def test_login_name_must_be_usable_in_a_url(client: AsyncClient) -> None:
-    response = await client.post("/api/auth/signup", json={"login_name": "a b/c"})
+async def test_a_login_name_may_be_japanese(client: AsyncClient) -> None:
+    """`login_name` は URL に出ないので、文字種を絞る理由がない。"""
+    response = await client.post("/api/auth/signup", json={"login_name": "アリス"})
+
+    assert response.status_code == 201
+    assert response.json()["login_name"] == "アリス"
+
+
+async def test_an_empty_login_name_is_rejected(client: AsyncClient) -> None:
+    response = await client.post("/api/auth/signup", json={"login_name": ""})
 
     assert response.status_code == 422
 

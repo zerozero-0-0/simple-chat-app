@@ -18,9 +18,7 @@ NAME_MAX_LENGTH = 32
 MESSAGE_BODY_MAX_LENGTH = 1000
 CLIENT_MESSAGE_ID_MAX_LENGTH = 64
 
-LOGIN_NAME = Field(
-    min_length=1, max_length=NAME_MAX_LENGTH, pattern=r"^[A-Za-z0-9_-]+$"
-)
+LOGIN_NAME = Field(min_length=1, max_length=NAME_MAX_LENGTH)
 DISPLAY_NAME = Field(default=None, min_length=1, max_length=NAME_MAX_LENGTH)
 
 
