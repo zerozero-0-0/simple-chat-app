@@ -1,7 +1,8 @@
+import unicodedata
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer
 
 
 def as_utc(value: datetime) -> str:
@@ -18,17 +19,34 @@ NAME_MAX_LENGTH = 32
 MESSAGE_BODY_MAX_LENGTH = 1000
 CLIENT_MESSAGE_ID_MAX_LENGTH = 64
 
-LOGIN_NAME = Field(min_length=1, max_length=NAME_MAX_LENGTH)
-DISPLAY_NAME = Field(default=None, min_length=1, max_length=NAME_MAX_LENGTH)
+
+def cleaned(value: Any) -> Any:
+    """前後の空白を落とし、NFC に揃える。
+
+    `login_name` は認証の鍵なので、見た目が同じ名前は同じユーザーになる必要がある。
+    NFD の「が」(か + 濁点) は NFC の「が」と同じ 1 人として扱う。
+    """
+    if not isinstance(value, str):
+        return value
+    return unicodedata.normalize("NFC", value).strip()
+
+
+# 上限は Unicode のコードポイント単位。フロントも `[...value].length` で数える。
+# 長さは空白を落とした後の値で見る
+Name = Annotated[
+    str,
+    BeforeValidator(cleaned),
+    Field(min_length=1, max_length=NAME_MAX_LENGTH),
+]
 
 
 class SignupRequest(BaseModel):
-    login_name: str = LOGIN_NAME
-    display_name: str | None = DISPLAY_NAME
+    login_name: Name
+    display_name: Name | None = None
 
 
 class LoginRequest(BaseModel):
-    login_name: str = LOGIN_NAME
+    login_name: Name
 
 
 class UserResponse(BaseModel):

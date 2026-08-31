@@ -274,6 +274,17 @@ async def test_sending_to_an_unknown_room_is_rejected(client: AsyncClient) -> No
     assert response.status_code == 404
 
 
+async def test_a_message_may_contain_an_emoji(client: AsyncClient, room: Room) -> None:
+    await enter(client, room)
+
+    response = await client.post(
+        f"/api/rooms/{room.public_id}/messages", json=payload("やあ🌸")
+    )
+
+    assert response.status_code == 201
+    assert response.json()["body"] == "やあ🌸"
+
+
 async def test_an_empty_body_is_rejected(client: AsyncClient, room: Room) -> None:
     await enter(client, room)
 
