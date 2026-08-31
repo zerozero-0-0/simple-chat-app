@@ -42,6 +42,10 @@ uv run --project backend uvicorn app.main:app --reload --app-dir backend
 
 API ドキュメントは http://localhost:8000/docs で確認できます。
 
+フロントエンドは既定で http://localhost:8000 の API を叩きます。変えるときは
+`NEXT_PUBLIC_API_BASE_URL` を設定してください。この値は**ビルド時にバンドルへ
+埋め込まれる**ので、`pnpm --dir frontend build` より前に設定します。
+
 バックエンドの設定は環境変数と `backend/.env` から読みます(接頭辞 `APP_`)。
 起動する場所に関わらず `backend/.env` を読むので、リポジトリルートから uvicorn を
 起動しても、`--directory backend` で pytest を走らせても同じ設定になります。

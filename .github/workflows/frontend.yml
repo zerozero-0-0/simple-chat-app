@@ -17,3 +17,5 @@ jobs:
       - run: pnpm --dir frontend install
       - run: pre-commit run biome-format --all-files
       - run: pre-commit run eslint --all-files
+      - run: pnpm --dir frontend typecheck
+      - run: pnpm --dir frontend test
