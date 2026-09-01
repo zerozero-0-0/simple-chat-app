@@ -38,6 +38,7 @@ export function MessageForm({
           id="body"
           rows={1}
           className="max-h-40 flex-1 resize-none rounded-2xl border border-zinc-300 px-3 py-2 dark:border-zinc-700"
+          placeholder="メッセージを入力"
           value={body}
           onChange={(event) => onBodyChange(event.target.value)}
           onKeyDown={(event) => {

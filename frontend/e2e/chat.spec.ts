@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ROOM_NAME, enter, listed, send, streaming } from "./helpers";
+import { ROOM_NAME, enter, listed, roomView, send, streaming } from "./helpers";
 
 test("入室するとチャットルームに着く", async ({ page }) => {
   await enter(page, "つくひと");
@@ -121,4 +121,108 @@ test("送信中に打ち足した文字が消えない", async ({ page }) => {
 
   await listed(page, "さきの一言");
   await expect(input).toHaveValue("さきの一言あとの一言");
+});
+
+test("読み返している間は、新着で下に飛ばされない", async ({
+  page,
+  browser,
+}) => {
+  await enter(page, "よみかえすひと");
+  await streaming(page);
+  const other = await (await browser.newContext()).newPage();
+  await enter(other, "はなしかけるひと");
+  await streaming(other);
+
+  // 一覧がはみ出すまで積む
+  for (let index = 0; index < 20; index += 1) {
+    await send(page, `つみあげ ${index}`);
+  }
+  await listed(page, "つみあげ 19");
+
+  const view = roomView(page);
+  await view.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await expect.poll(() => view.evaluate((e) => e.scrollTop)).toBe(0);
+
+  await send(other, "よみかえし中の割り込み");
+
+  await listed(page, "よみかえし中の割り込み");
+  // 読んでいた位置に留まること
+  expect(await view.evaluate((element) => element.scrollTop)).toBe(0);
+});
+
+test("下端を見ているときは、新着を追いかける", async ({ page, browser }) => {
+  await enter(page, "おいかけるひと");
+  await streaming(page);
+  const other = await (await browser.newContext()).newPage();
+  await enter(other, "つづけるひと");
+  await streaming(other);
+
+  for (let index = 0; index < 20; index += 1) {
+    await send(page, `おいかけ ${index}`);
+  }
+  await listed(page, "おいかけ 19");
+
+  await send(other, "下端への割り込み");
+
+  await listed(page, "下端への割り込み");
+  const view = roomView(page);
+  await expect
+    .poll(() =>
+      view.evaluate(
+        (element) =>
+          element.scrollHeight - element.scrollTop - element.clientHeight,
+      ),
+    )
+    .toBeLessThanOrEqual(1);
+});
+
+test("発言が増えても、ヘッダーと入力欄が画面に残る", async ({ page }) => {
+  await enter(page, "つみあげるひと");
+  await streaming(page);
+
+  for (let index = 0; index < 20; index += 1) {
+    await send(page, `画面いっぱい ${index}`);
+  }
+  await listed(page, "画面いっぱい 19");
+
+  // 伸びるのは一覧の中だけ。文書が伸びると入力欄が画面外へ流れていく
+  const documentGrew = await page.evaluate(
+    () =>
+      document.documentElement.scrollHeight >
+      document.documentElement.clientHeight,
+  );
+  expect(documentGrew).toBe(false);
+  await expect(page.getByRole("banner")).toBeInViewport();
+  await expect(page.getByLabel("メッセージ")).toBeInViewport();
+});
+
+test("読み返している最中でも、自分の発言は見えるところに出る", async ({
+  page,
+}) => {
+  await enter(page, "よみつつおくるひと");
+  await streaming(page);
+
+  for (let index = 0; index < 20; index += 1) {
+    await send(page, `さかのぼり ${index}`);
+  }
+  await listed(page, "さかのぼり 19");
+
+  const view = roomView(page);
+  await view.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await expect
+    .poll(() => view.evaluate((element) => element.scrollTop))
+    .toBe(0);
+
+  await send(page, "よみかえし中に送った一言");
+  await listed(page, "よみかえし中に送った一言");
+
+  // 送ったのに画面外だと、送れたのかどうかが分からない。
+  // 一覧の中に限る。送信中は入力欄にも同じ文字が残っている
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "よみかえし中に送った一言" }),
+  ).toBeInViewport();
 });

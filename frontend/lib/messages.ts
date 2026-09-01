@@ -16,3 +16,23 @@ export function mergeMessages(
   }
   return [...byId.values()].sort((left, right) => left.id - right.id);
 }
+
+/**
+ * 末尾に自分の発言が新しく増えたか。
+ *
+ * 増えたときだけ見たいので、末尾の id が前回から変わったことも見る。
+ * `mergeMessages` は 1 通も増えていなくても新しい配列を返すため、
+ * 末尾が誰かだけで決めると、つなぎ直しの取り直しでも真になる。
+ */
+export function isMyNewMessage(
+  messages: Message[],
+  lastSeenId: number | undefined,
+  myPublicId: string,
+): boolean {
+  const last = messages.at(-1);
+  return (
+    last !== undefined &&
+    last.id !== lastSeenId &&
+    last.sender.public_id === myPublicId
+  );
+}

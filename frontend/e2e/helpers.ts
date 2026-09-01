@@ -39,3 +39,8 @@ export async function send(page: Page, body: string): Promise<void> {
 export function listed(page: Page, body: string) {
   return expect(page.getByRole("list")).toContainText(body);
 }
+
+/** メッセージ一覧のスクロールする箱。 */
+export function roomView(page: Page) {
+  return page.getByRole("log", { name: "発言の一覧" });
+}
