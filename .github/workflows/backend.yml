@@ -10,7 +10,13 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # 依存の解決はプラットフォームで変わる。sqlalchemy の greenlet は
+    # platform_machine で条件が付いており、Apple Silicon だけ外れていた
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4

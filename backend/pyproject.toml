@@ -7,7 +7,9 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "fastapi>=0.141.1",
     "pydantic-settings>=2.15.0",
-    "sqlalchemy>=2.0.52",
+    # asyncio の extra を付けると greenlet が入る。素の sqlalchemy は
+    # platform_machine で条件を付けており、Apple Silicon (arm64) だけ外れる
+    "sqlalchemy[asyncio]>=2.0.52",
     "uvicorn[standard]>=0.52.4",
 ]
 
