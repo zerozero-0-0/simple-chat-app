@@ -139,3 +139,10 @@ backend/
   app/     main.py, config.py, db.py, models.py, schemas.py, deps.py, stream.py, routers/
   tests/
 ```
+
+それぞれの詳細は個別の README にあります。
+
+| | 内容 |
+| -- | -- |
+| [`frontend/README.md`](./frontend/README.md) | 画面の分け方、受信と送信の仕組み、テストの走らせ方 |
+| [`backend/README.md`](./backend/README.md) | **API 一覧**、DB と認証の設計、WebSocket の接続管理 |
