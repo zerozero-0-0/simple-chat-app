@@ -1,16 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
-
-/** ログイン画面を開いて名前を送るところまで。 */
-async function enter(page: Page, name: string): Promise<void> {
-  await page.goto("/login");
-  await page.getByLabel("ユーザー名").fill(name);
-  await page.getByRole("button", { name: "入室する" }).click();
-}
-
-/** 入室中の表示。表示名がそのまま出る。 */
-function enteredAs(page: Page, name: string) {
-  return expect(page.getByRole("main")).toContainText(`${name} として入室中`);
-}
+import { expect, test } from "@playwright/test";
+import { enter, enteredAs } from "./helpers";
 
 test("名前を入れると入室できる", async ({ page }) => {
   await enter(page, "はじめてのひと");

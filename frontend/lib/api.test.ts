@@ -97,6 +97,26 @@ describe("送るリクエスト", () => {
     );
   });
 
+  test("limit を渡すとクエリに載る", async () => {
+    const spy = stubFetch(jsonResponse([]));
+
+    await fetchMessages("r1", 12, 100);
+
+    expect(lastCall(spy).url).toBe(
+      "http://localhost:8000/api/rooms/r1/messages?after=12&limit=100",
+    );
+  });
+
+  test("limit だけでも載る", async () => {
+    const spy = stubFetch(jsonResponse([]));
+
+    await fetchMessages("r1", undefined, 100);
+
+    expect(lastCall(spy).url).toBe(
+      "http://localhost:8000/api/rooms/r1/messages?limit=100",
+    );
+  });
+
   test("after を渡さなければ載せない", async () => {
     const spy = stubFetch(jsonResponse([]));
 
