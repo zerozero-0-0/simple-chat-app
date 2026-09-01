@@ -75,7 +75,13 @@ export function joinRoom(publicId: string): Promise<Room> {
   return request<Room>(`/rooms/${publicId}/members`, { method: "POST" });
 }
 
-/** `after` より後のメッセージを古い順に返す。 */
+/**
+ * メッセージを古い順に返す。
+ *
+ * `after` を渡すとその ID より後を古い方から、渡さなければ直近の分だけ
+ * (件数はサーバーが決める。既定は 50 件)。
+ * 画面を開いたときは後者、切断していた間の取りこぼしを追うときは前者を使う。
+ */
 export function fetchMessages(
   publicId: string,
   after?: number,
