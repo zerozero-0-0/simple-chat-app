@@ -15,7 +15,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BACKEND_DIR / ".env", env_prefix="APP_")
 
     database_url: str = f"sqlite+aiosqlite:///{(BACKEND_DIR / 'chat.db').as_posix()}"
-    cors_origins: list[str] = ["http://localhost:3000"]
+
+    # 通信を許すオリジン。公開するときはここに本番のオリジンを並べる
+    cors_origins: list[str] = []
+
+    # 手元のどのポートからでも通す。`next dev` は 3000 が埋まっていれば 3001 で
+    # 上がるので、ポートを 1 つに決め打つとその場で全部 CORS に弾かれる。
+    # 公開するときは空にして、cors_origins だけで許す
+    cors_origin_regex: str = r"http://(localhost|127\.0\.0\.1|\[::1\]):\d+"
 
     # セッションの猶予。残りが半分を切ると延びるので、最後に使ってから
     # 最短でこの半分は保つ
