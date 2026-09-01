@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from starlette.websockets import WebSocketDisconnect
 
+from app.config import settings
 from app.deps import (
     SESSION_COOKIE_NAME,
     CurrentUser,
@@ -144,8 +145,23 @@ async def stream_messages(websocket: WebSocket, public_id: str, db: DbSession) -
         stream.remove(websocket)
 
 
+def _from_allowed_origin(websocket: WebSocket) -> bool:
+    """許可したオリジンから来た接続か。
+
+    CORS ミドルウェアは WebSocket を素通しするので、HTTP と同じ許可リストを
+    ここで当てる。Origin を付けるのはブラウザなので、付いていない接続
+    (curl や自前のクライアント) はセッションだけで判断する。
+    """
+    origin = websocket.headers.get("origin")
+    return origin is None or origin in settings.cors_origins
+
+
 async def _accept(websocket: WebSocket, public_id: str, db: DbSession) -> Room | None:
-    """認証と入室を確かめて接続を受ける。断るときは None を返す。"""
+    """オリジンと認証と入室を確かめて接続を受ける。断るときは None を返す。"""
+    if not _from_allowed_origin(websocket):
+        await close_quietly(websocket)
+        return None
+
     token = websocket.cookies.get(SESSION_COOKIE_NAME)
     user = await find_session_user(db, token) if token is not None else None
     if user is None:

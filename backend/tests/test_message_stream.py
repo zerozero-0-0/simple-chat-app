@@ -22,6 +22,7 @@ from starlette.websockets import WebSocketDisconnect
 from uvicorn.protocols.utils import ClientDisconnected
 
 from app import main
+from app.config import settings
 from app.db import get_session
 from app.deps import hash_token
 from app.main import app
@@ -145,6 +146,46 @@ def test_an_unknown_room_is_refused(client: TestClient) -> None:
         client.websocket_connect("/api/rooms/deadbeef/messages/stream") as ws,
     ):
         ws.receive_json()
+
+
+def test_a_browser_on_an_allowed_origin_connects(client: TestClient) -> None:
+    public_id = enter(client, "alice")
+
+    with client.websocket_connect(
+        f"/api/rooms/{public_id}/messages/stream",
+        headers={"Origin": settings.cors_origins[0]},
+    ) as ws:
+        send(client, public_id, "やあ", "1")
+
+        assert ws.receive_json()["body"] == "やあ"
+
+
+def test_a_browser_on_another_origin_is_refused(client: TestClient) -> None:
+    """よそのページから、ログイン中の Cookie でつながせないこと。
+
+    CORS ミドルウェアは WebSocket を素通しするので、ここで断らないと
+    HTTP では弾いているオリジンに部屋の中身が流れ続ける。
+    """
+    public_id = enter(client, "alice")
+
+    with (
+        pytest.raises(WebSocketDisconnect),
+        client.websocket_connect(
+            f"/api/rooms/{public_id}/messages/stream",
+            headers={"Origin": "http://evil.example"},
+        ) as ws,
+    ):
+        ws.receive_json()
+
+
+def test_a_client_without_an_origin_connects(client: TestClient) -> None:
+    """Origin を付けないのはブラウザ以外。セッションだけで判断する。"""
+    public_id = enter(client, "alice")
+
+    with client.websocket_connect(f"/api/rooms/{public_id}/messages/stream") as ws:
+        send(client, public_id, "やあ", "1")
+
+        assert ws.receive_json()["body"] == "やあ"
 
 
 def test_a_resend_is_not_delivered_again(client: TestClient) -> None:
