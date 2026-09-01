@@ -66,11 +66,26 @@ class RoomResponse(BaseModel):
     name: str
 
 
+def trimmed(value: Any) -> Any:
+    """前後の空白を落とす。"""
+    if not isinstance(value, str):
+        return value
+    return value.strip()
+
+
+# 前後の空白だけ落として中身はそのまま残す。長さは落とした後の値で見る
+Body = Annotated[
+    str,
+    BeforeValidator(trimmed),
+    Field(min_length=1, max_length=MESSAGE_BODY_MAX_LENGTH),
+]
+
+
 class MessageCreateRequest(BaseModel):
     client_message_id: str = Field(
         min_length=1, max_length=CLIENT_MESSAGE_ID_MAX_LENGTH
     )
-    body: str = Field(min_length=1, max_length=MESSAGE_BODY_MAX_LENGTH)
+    body: Body
 
 
 class MessageSender(BaseModel):

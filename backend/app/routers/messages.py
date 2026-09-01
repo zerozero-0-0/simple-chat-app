@@ -68,18 +68,27 @@ async def list_messages(
     after: Annotated[int | None, Query(ge=0)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[MessageResponse]:
-    """`after` より後のメッセージを古い順に返す。"""
+    """メッセージを古い順に返す。
+
+    `after` を渡すとその ID より後を古い方から、渡さなければ最後の `limit` 件。
+    画面を開いたときに見たいのは直近のやりとりで、`after` は切断していた間に
+    取りこぼした分を追いかけるのに使う。
+    """
     query = (
         select(Message)
         .where(Message.room_id == room.id)
         .options(selectinload(Message.sender))
-        .order_by(Message.id)
         .limit(limit)
     )
-    if after is not None:
-        query = query.where(Message.id > after)
 
-    messages = (await db.scalars(query)).all()
+    if after is not None:
+        query = query.where(Message.id > after).order_by(Message.id)
+        messages = list((await db.scalars(query)).all())
+    else:
+        # 新しい方から limit 件を取り、返すときに古い順へ戻す
+        query = query.order_by(Message.id.desc())
+        messages = list(reversed((await db.scalars(query)).all()))
+
     return [MessageResponse.model_validate(message) for message in messages]
 
 

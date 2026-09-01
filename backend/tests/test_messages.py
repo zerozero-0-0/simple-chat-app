@@ -195,6 +195,55 @@ async def test_limit_caps_the_number_of_messages(
     assert len(response.json()) == 2
 
 
+async def test_listing_returns_the_latest_messages(
+    client: AsyncClient, room: Room
+) -> None:
+    """画面を開いたときに出るのが直近のやりとりであること。
+
+    古い方から返すと、発言が溜まった部屋では最初の 50 件で止まったまま
+    今のやりとりが見えない。
+    """
+    await enter(client, room)
+    for index in range(5):
+        await client.post(
+            f"/api/rooms/{room.public_id}/messages",
+            json=payload(f"body{index}", f"c{index}"),
+        )
+
+    response = await client.get(
+        f"/api/rooms/{room.public_id}/messages", params={"limit": 3}
+    )
+
+    assert [message["body"] for message in response.json()] == [
+        "body2",
+        "body3",
+        "body4",
+    ]
+
+
+async def test_after_walks_forward_from_the_cursor(
+    client: AsyncClient, room: Room
+) -> None:
+    """取りこぼしは古い方から順に追いつけること。"""
+    await enter(client, room)
+    sent = [
+        (
+            await client.post(
+                f"/api/rooms/{room.public_id}/messages",
+                json=payload(f"body{index}", f"c{index}"),
+            )
+        ).json()
+        for index in range(5)
+    ]
+
+    response = await client.get(
+        f"/api/rooms/{room.public_id}/messages",
+        params={"after": sent[0]["id"], "limit": 2},
+    )
+
+    assert [message["body"] for message in response.json()] == ["body1", "body2"]
+
+
 async def test_messages_from_another_room_are_not_listed(
     client: AsyncClient, room: Room, other_room: Room
 ) -> None:
@@ -316,3 +365,53 @@ async def test_a_body_at_the_limit_is_accepted(client: AsyncClient, room: Room) 
     )
 
     assert response.status_code == 201
+
+
+@pytest.mark.parametrize("body", ["   ", "\n", "\t "])
+async def test_a_blank_body_is_rejected(
+    client: AsyncClient, room: Room, body: str
+) -> None:
+    """空白だけの発言は一覧で空の吹き出しになる。"""
+    await enter(client, room)
+
+    response = await client.post(
+        f"/api/rooms/{room.public_id}/messages", json=payload(body=body)
+    )
+
+    assert response.status_code == 422
+
+
+async def test_a_body_is_trimmed(client: AsyncClient, room: Room) -> None:
+    await enter(client, room)
+
+    response = await client.post(
+        f"/api/rooms/{room.public_id}/messages", json=payload(body="  やあ  ")
+    )
+
+    assert response.json()["body"] == "やあ"
+
+
+async def test_a_body_is_measured_after_trimming(
+    client: AsyncClient, room: Room
+) -> None:
+    """前後の空白で上限を超えたことにされないこと。"""
+    await enter(client, room)
+
+    response = await client.post(
+        f"/api/rooms/{room.public_id}/messages",
+        json=payload(body="  " + "あ" * 1000 + "  "),
+    )
+
+    assert response.status_code == 201
+
+
+async def test_a_body_keeps_its_inner_line_breaks(
+    client: AsyncClient, room: Room
+) -> None:
+    await enter(client, room)
+
+    response = await client.post(
+        f"/api/rooms/{room.public_id}/messages", json=payload(body="いち\nに")
+    )
+
+    assert response.json()["body"] == "いち\nに"
