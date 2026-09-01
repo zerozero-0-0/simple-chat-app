@@ -78,16 +78,26 @@ export function joinRoom(publicId: string): Promise<Room> {
 /**
  * メッセージを古い順に返す。
  *
- * `after` を渡すとその ID より後を古い方から、渡さなければ直近の分だけ
- * (件数はサーバーが決める。既定は 50 件)。
+ * `after` を渡すとその ID より後を古い方から、渡さなければ直近の分だけ。
  * 画面を開いたときは後者、切断していた間の取りこぼしを追うときは前者を使う。
+ *
+ * `limit` を渡すとその件数で頭打ちになる。返ってきた件数が `limit` と同じなら
+ * まだ続きがあるので、カーソルを進めて呼び直す。省略時はサーバーの既定 (50 件)。
  */
 export function fetchMessages(
   publicId: string,
   after?: number,
+  limit?: number,
 ): Promise<Message[]> {
-  const query = after === undefined ? "" : `?after=${after}`;
-  return request<Message[]>(`/rooms/${publicId}/messages${query}`);
+  const query = new URLSearchParams();
+  if (after !== undefined) {
+    query.set("after", String(after));
+  }
+  if (limit !== undefined) {
+    query.set("limit", String(limit));
+  }
+  const suffix = query.size === 0 ? "" : `?${query}`;
+  return request<Message[]>(`/rooms/${publicId}/messages${suffix}`);
 }
 
 export function sendMessage(
