@@ -75,20 +75,55 @@ https に移すときは次の 3 つを変更します。
 ## テスト
 
 ```bash
+# バックエンド
 uv run --directory backend pytest
+
+# フロントエンドのユニットテスト
+pnpm --dir frontend test
+
+# ブラウザを通した E2E
+pnpm --dir frontend run test:e2e
 ```
+
+E2E は Playwright です。初回はブラウザの取得が必要です。
+
+```bash
+pnpm --dir frontend exec playwright install chromium
+```
+
+開発用とは別のポート (フロント 3100 / API 8100) と別の DB を使い、起動のたびに
+DB を作り直します。本番と同じビルドに対して走らせるので、`next dev` にしかない挙動は
+結果に混ざりません。実行中に `pnpm --dir frontend dev` を止める必要はありません。
+
+閉じたポートへの接続が拒否されずタイムアウトする環境 (WSL2 のミラーネットワークなど) では、
+起動前の疎通確認で数分待つことがあります。その場合は `E2E_HOST=::1` を渡してください。
+
+```bash
+E2E_HOST=::1 pnpm --dir frontend run test:e2e
+```
+
+E2E は `pnpm --dir frontend build` を走らせるので、実行後の `frontend/.next` には
+E2E 用の API 宛先が埋め込まれた本番ビルドが残ります。そのあと `pnpm --dir frontend start`
+で動かすときは、ビルドし直してください。
 
 ## コード品質
 
 | 対象 | フォーマット | リント | 型チェック |
 | -- | -- | -- | -- |
-| frontend | Biome | ESLint | — |
+| frontend | Biome | ESLint | tsc |
 | backend | ruff | ruff | ty |
 
-pre-commit がコミット時に上記を実行します。手動で全ファイルにかける場合:
+pre-commit がコミット時に実行します。手動で全ファイルにかける場合:
 
 ```bash
 pre-commit run --all-files
+```
+
+入っているのはフォーマットとリント、それに backend の `ty` です。frontend の型チェックは
+GitHub Actions だけで走るので、手元で見るときは直接実行します。
+
+```bash
+pnpm --dir frontend typecheck
 ```
 
 同じチェックを GitHub Actions でも実行しています([`.github/workflows`](./.github/workflows))。
@@ -96,6 +131,11 @@ pre-commit run --all-files
 ## ディレクトリ構成
 
 ```
-frontend/  Next.js アプリケーション
-backend/   FastAPI アプリケーション
+frontend/
+  app/     画面。状態と通信は page.tsx が持ち、それ以外は見た目だけを持つ
+  lib/     API クライアント、受信フック、純粋な小物
+  e2e/     Playwright
+backend/
+  app/     main.py, config.py, db.py, models.py, schemas.py, deps.py, stream.py, routers/
+  tests/
 ```
